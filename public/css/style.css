@@ -1,0 +1,622 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #0f0f0f;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 28px;
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed #3a3a3a;
+  border-radius: 12px;
+  padding: 36px 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 16px;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.05);
+}
+
+.drop-content svg {
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.drop-text {
+  font-size: 15px;
+  color: #ccc;
+  margin-bottom: 6px;
+}
+
+.drop-hint {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+.btn-secondary {
+  background: #2a2a2a;
+  color: #ccc;
+  border: 1px solid #3a3a3a;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #333;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: #6c5ce7;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  margin-bottom: 16px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5a4bd1;
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* File info */
+.file-info {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-row svg {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.file-name {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: 13px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.btn-remove:hover {
+  color: #ff4444;
+}
+
+/* Progress */
+.progress-container {
+  margin-bottom: 16px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #888;
+}
+
+/* Result */
+.result {
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.result.success {
+  background: rgba(0, 200, 83, 0.1);
+  border: 1px solid rgba(0, 200, 83, 0.3);
+  color: #00c853;
+}
+
+.result.error {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff4444;
+}
+
+.btn-download {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 28px;
+  background: #00c853;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-download:hover {
+  background: #00b34a;
+}
+
+/* File list */
+.file-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #888;
+}
+
+.btn-clear-all {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.2s;
+}
+.btn-clear-all:hover {
+  color: #ff4444;
+}
+
+.file-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #2a2a2a;
+}
+.file-list-item:last-child {
+  border-bottom: none;
+}
+.file-list-item svg {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.file-list-name {
+  flex: 1;
+  text-align: left;
+  font-size: 13px;
+  color: #ccc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-list-size {
+  font-size: 12px;
+  color: #777;
+  flex-shrink: 0;
+}
+
+.btn-list-remove {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.btn-list-remove:hover {
+  color: #ff4444;
+}
+
+/* Per-file progress list */
+.file-progress-list {
+  margin-bottom: 16px;
+}
+
+.file-progress-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.file-progress-item.done .fpi-name {
+  color: #00c853;
+}
+.file-progress-item.error .fpi-name {
+  color: #ff4444;
+}
+
+.fpi-name {
+  width: 120px;
+  font-size: 12px;
+  color: #ccc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.fpi-bar {
+  flex: 1;
+  height: 4px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.fpi-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.file-progress-item.error .fpi-fill {
+  background: #ff4444;
+}
+
+.fpi-pct {
+  width: 36px;
+  font-size: 11px;
+  color: #888;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Results list */
+.results-list {
+  margin-bottom: 16px;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  gap: 10px;
+}
+
+.result-item.success {
+  background: rgba(0, 200, 83, 0.1);
+  border: 1px solid rgba(0, 200, 83, 0.3);
+  color: #00c853;
+}
+
+.result-item.error {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff4444;
+}
+
+.btn-download-sm {
+  padding: 6px 14px;
+  background: #00c853;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.btn-download-sm:hover {
+  background: #00b34a;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+  .card {
+    padding: 24px 16px;
+    border-radius: 12px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .drop-zone {
+    padding: 28px 12px;
+  }
+}
+
+/* ========== Donate ========== */
+
+/* Floating button */
+.btn-donate-float {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  background: rgba(108, 92, 231, 0.12);
+  border: 1px solid rgba(108, 92, 231, 0.25);
+  color: #a78bfa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: background 0.2s, transform 0.2s;
+}
+.btn-donate-float:hover,
+.btn-donate-float:focus-visible {
+  background: rgba(108, 92, 231, 0.3);
+  transform: scale(1.08);
+  outline: none;
+}
+
+/* CTA below results */
+.donate-cta {
+  text-align: center;
+  padding: 12px 0 0;
+  color: #888;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.donate-cta p {
+  margin-bottom: 6px;
+}
+.btn-donate-inline {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+.btn-donate-inline:hover {
+  color: #c4b5fd;
+}
+
+/* Overlay */
+.donate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Card */
+.donate-card {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 32px 28px 24px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+/* Close button */
+.donate-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 12px;
+  margin: -12px;
+}
+.donate-close:hover {
+  color: #ccc;
+}
+.donate-close:focus-visible {
+  outline: 2px solid #6c5ce7;
+  outline-offset: 2px;
+}
+
+/* QR wrapper */
+.qr-wrapper {
+  position: relative;
+  min-height: 260px;
+  margin-bottom: 14px;
+}
+.qr-wrapper img {
+  border-radius: 8px;
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+.qr-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 14px;
+}
+#qrImage.complete ~ .qr-loading {
+  display: none;
+}
+
+/* Donate text */
+.donate-hint {
+  font-size: 15px;
+  color: #e0e0e0;
+  margin-bottom: 4px;
+}
+.donate-sub {
+  font-size: 13px;
+  color: #a78bfa;
+  margin-bottom: 6px;
+}
+.donate-tip {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 6px;
+}
+.donate-desc {
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 18px;
+}
+
+/* "I've paid" button */
+.btn-donate-paid {
+  width: 100%;
+  padding: 12px;
+  background: #00c853;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn-donate-paid:hover:not(:disabled) {
+  background: #00b34a;
+}
+.btn-donate-paid:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  background: #333;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast-icon {
+  color: #00c853;
+  font-size: 16px;
+}
+
+/* Mobile */
+@media (max-width: 520px) {
+  .btn-donate-float {
+    height: 36px;
+    font-size: 13px;
+    bottom: 16px;
+    right: 16px;
+  }
+  .donate-card {
+    padding: 24px 18px 18px;
+  }
+}
