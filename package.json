@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "Web-based FLAC to MP3 audio converter",
   "main": "server.js",
+  "bin": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "node build-sea.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,5 +20,8 @@
     "multer": "^2.1.1",
     "p-queue": "^9.3.0",
     "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
   }
 }

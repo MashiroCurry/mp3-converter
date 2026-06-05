@@ -11,13 +11,15 @@ function securityHeaders(req, res, next) {
   res.setHeader('Referrer-Policy', 'no-referrer');
   next();
 }
-const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+// ffmpeg-installer — optional; in SEA builds ffmpeg is pre-extracted by the shim
+let ffmpegInstaller = null;
+try { ffmpegInstaller = require('@ffmpeg-installer/ffmpeg'); } catch (_) { /* SEA: pre-extracted */ }
 const rateLimit = require('express-rate-limit');
 
 // Copy ffmpeg to a path without spaces (required for child_process on Windows via Git Bash)
 const FFMPEG_DIR = 'C:/ffmpeg';
 const ffmpegBinPath = path.join(FFMPEG_DIR, 'ffmpeg.exe');
-if (!fs.existsSync(ffmpegBinPath)) {
+if (!fs.existsSync(ffmpegBinPath) && ffmpegInstaller) {
   fs.mkdirSync(FFMPEG_DIR, { recursive: true });
   fs.copyFileSync(ffmpegInstaller.path, ffmpegBinPath);
 }
