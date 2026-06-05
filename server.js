@@ -1,6 +1,16 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+// Security headers middleware (replaces helmet to avoid dependency)
+function securityHeaders(req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+}
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const rateLimit = require('express-rate-limit');
 
@@ -57,6 +67,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Security headers
+app.use(securityHeaders);
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -139,3 +152,17 @@ const server = app.listen(CONFIG.PORT, () => {
 server.timeout = CONFIG.REQUEST_TIMEOUT_MS;
 server.keepAliveTimeout = CONFIG.REQUEST_TIMEOUT_MS;
 server.requestTimeout = CONFIG.REQUEST_TIMEOUT_MS;
+
+// Graceful shutdown
+function shutdown(signal) {
+  console.log(`\nReceived ${signal}, shutting down gracefully...`);
+  require('./routes/convert').shutdown();
+  server.close(() => {
+    console.log('Server closed.');
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

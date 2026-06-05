@@ -10,7 +10,20 @@ const { default: PQueue } = require('p-queue');
 // ffmpeg binary path (pre-copied to a no-spaces location)
 const FFMPEG_BIN = 'C:/ffmpeg/ffmpeg.exe';
 
+// Track active ffmpeg child processes for graceful shutdown
+const activeProcesses = new Set();
+
 const router = Router();
+
+// Graceful shutdown: kill all active ffmpeg processes
+router.shutdown = function () {
+  const count = activeProcesses.size;
+  if (count > 0) {
+    console.log(`Terminating ${count} active ffmpeg process(es)...`);
+    activeProcesses.forEach(p => { try { p.kill('SIGKILL'); } catch (_) {} });
+    activeProcesses.clear();
+  }
+};
 
 // p-queue for concurrency control
 const queue = new PQueue({ concurrency: 2 });
@@ -183,6 +196,7 @@ router.post('/convert', (req, res) => {
             console.log(`[${id}] ffmpeg start`);
 
             const proc = exec(cmd, { timeout: 30 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 });
+            activeProcesses.add(proc);
 
             let lastPercent = 0;
             let estTotal = 0;
@@ -216,6 +230,7 @@ router.post('/convert', (req, res) => {
             });
 
             proc.on('close', (code) => {
+              activeProcesses.delete(proc);
               if (code === 0) {
                 const task = tasks.get(id);
                 if (task) {
@@ -239,6 +254,7 @@ router.post('/convert', (req, res) => {
             });
 
             proc.on('error', (err) => {
+              activeProcesses.delete(proc);
               const task = tasks.get(id);
               if (task) {
                 task.status = 'error';

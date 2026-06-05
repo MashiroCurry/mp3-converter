@@ -157,10 +157,6 @@ Windows 下 `child_process.exec` 无法正确处理含空格的路径，因此�
 - 服务重启后所有进行中和已完成的任务信息会丢失
 - 已完成任务的下载链接仅在服务运行期间有效
 
-### 未使用的依赖
-
-`package.json` 中的 `fluent-ffmpeg` 和 `ffmpeg-static` 实际未被使用。由于同样的空格路径问题，代码改用 `child_process.exec` 直接调用 ffmpeg。
-
 ## License
 
 ISC

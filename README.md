@@ -157,10 +157,6 @@ Task state is stored in an in-memory `Map` shared across routes via Express `app
 - All in-progress and completed task information is lost on server restart
 - Download links for completed tasks are only valid while the server is running
 
-### Unused Dependencies
-
-The `fluent-ffmpeg` and `ffmpeg-static` packages in `package.json` are not actually used. Due to the same space-in-path issue, the code invokes ffmpeg directly via `child_process.exec` instead.
-
 ## License
 
 ISC
