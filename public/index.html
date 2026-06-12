@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FLAC to MP3 Converter</title>
+  <title>音频转换器 - MP3/WAV/FLAC 互转</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div id="mainContent">
   <div class="container">
     <div class="card">
-      <h1>FLAC → MP3</h1>
-      <p class="subtitle">无损音频格式转换</p>
+      <h1>音频转换</h1>
+      <p class="subtitle">MP3 / WAV / FLAC 批量互转</p>
 
       <div class="drop-zone" id="dropZone">
         <div class="drop-content" id="dropContent">
@@ -19,9 +19,9 @@
             <path d="M12 16V4M12 4L8 8M12 4L16 8"/>
             <path d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1"/>
           </svg>
-          <p class="drop-text">拖拽 FLAC 文件到此处</p>
+          <p class="drop-text">拖拽音频文件到此处</p>
           <p class="drop-hint">或点击选择文件</p>
-          <input type="file" id="fileInput" accept=".flac" hidden multiple>
+          <input type="file" id="fileInput" accept=".flac,.wav,.mp3" hidden multiple>
           <button type="button" class="btn-secondary" id="selectBtn">选择文件</button>
         </div>
 
@@ -31,6 +31,27 @@
             <button type="button" class="btn-clear-all" id="clearAllBtn">全部移除</button>
           </div>
           <div class="file-list" id="fileList"></div>
+        </div>
+      </div>
+
+      <div class="format-selector">
+        <label class="format-label">目标格式</label>
+        <div class="format-options">
+          <label class="format-option">
+            <input type="radio" name="targetFormat" value="mp3" checked>
+            <span class="format-badge">MP3</span>
+            <span class="format-desc">有损压缩</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" name="targetFormat" value="wav">
+            <span class="format-badge">WAV</span>
+            <span class="format-desc">无损未压缩</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" name="targetFormat" value="flac">
+            <span class="format-badge">FLAC</span>
+            <span class="format-desc">无损压缩</span>
+          </label>
         </div>
       </div>
 

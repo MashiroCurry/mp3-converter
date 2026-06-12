@@ -2,7 +2,7 @@ const { Router } = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
 const { fileTypeFromFile } = require('file-type');
 const { default: PQueue } = require('p-queue');
@@ -40,6 +40,32 @@ function getDirs(app) {
   };
 }
 
+const ACCEPTED_EXTENSIONS = ['.flac', '.wav', '.mp3'];
+const ACCEPTED_FORMATS = ['flac', 'wav', 'mp3'];
+
+function buildFfmpegArgs(inputPath, outputPath, inputFormat, targetFormat, bitrate) {
+  const args = ['-y', '-i', inputPath];
+  if (inputFormat === targetFormat) {
+    // Stream copy for same-format conversion (no quality loss)
+    args.push('-codec:a', 'copy');
+  } else {
+    switch (targetFormat) {
+      case 'wav':
+        args.push('-codec:a', 'pcm_s16le', '-map_metadata', '0');
+        break;
+      case 'flac':
+        args.push('-codec:a', 'flac', '-map_metadata', '0');
+        break;
+      case 'mp3':
+      default:
+        args.push('-codec:a', 'libmp3lame', '-b:a', bitrate || '320k', '-map_metadata', '0', '-id3v2_version', '3');
+        break;
+    }
+  }
+  args.push('-progress', 'pipe:1', '-nostats', outputPath);
+  return args;
+}
+
 // multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -60,8 +86,8 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.flac') {
-      return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'flac'), false);
+    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+      return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'audio'), false);
     }
     cb(null, true);
   },
@@ -83,7 +109,7 @@ router.post('/convert', (req, res) => {
           return res.status(400).json({ error: `单次最多上传 ${req.app.locals.CONFIG.MAX_FILES_PER_REQUEST} 个文件` });
         }
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-          return res.status(400).json({ error: '仅支持 .flac 文件' });
+          return res.status(400).json({ error: '仅支持 .flac .wav .mp3 文件' });
         }
         return res.status(400).json({ error: '上传失败' });
       }
@@ -92,6 +118,13 @@ router.post('/convert', (req, res) => {
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: '请选择文件' });
+    }
+
+    // Read and validate target format
+    const targetFormat = (req.body.targetFormat || 'mp3').toLowerCase();
+    if (!ACCEPTED_FORMATS.includes(targetFormat)) {
+      cleanupFiles(req.files);
+      return res.status(400).json({ error: '无效的目标格式' });
     }
 
     const tasks = req.app.locals.tasks;
@@ -108,16 +141,19 @@ router.post('/convert', (req, res) => {
         req.files.map(f => fileTypeFromFile(f.path))
       );
       const invalidFiles = [];
+      const detectedFormats = new Map(); // index → detected format ext
       for (let i = 0; i < validationResults.length; i++) {
         const r = validationResults[i];
-        if (r.status === 'rejected' || !r.value || r.value.ext !== 'flac') {
+        if (r.status === 'rejected' || !r.value || !ACCEPTED_FORMATS.includes(r.value.ext)) {
           invalidFiles.push(decodeFilename(req.files[i].originalname));
+        } else {
+          detectedFormats.set(i, r.value.ext);
         }
       }
       if (invalidFiles.length > 0) {
         cleanupFiles(req.files);
         return res.status(400).json({
-          error: `以下文件不是有效的 FLAC 格式: ${invalidFiles.join(', ')}`
+          error: `以下文件不是有效的音频格式: ${invalidFiles.join(', ')}`
         });
       }
 
@@ -150,7 +186,8 @@ router.post('/convert', (req, res) => {
         const id = req._fileIds[i];
         const inputPath = file.path;
         const originalStem = path.parse(decodeFilename(file.originalname)).name;
-        const outputFilename = originalStem + '_' + id + '.mp3';
+        const inputFormat = detectedFormats.get(i);
+        const outputFilename = originalStem + '_' + id + '.' + targetFormat;
         const outputPath = path.join(outputDir, outputFilename);
 
         tasks.set(id, {
@@ -161,6 +198,8 @@ router.post('/convert', (req, res) => {
           downloadUrl: null,
           errorMessage: null,
           originalName: decodeFilename(file.originalname),
+          inputFormat,
+          targetFormat,
           createdAt: Date.now(),
         });
 
@@ -180,23 +219,19 @@ router.post('/convert', (req, res) => {
 
         queue.add(async () => {
           return new Promise((resolve) => {
-            function quote(s) { return s.includes(' ') ? `"${s}"` : s; }
-            const cmd = [
-              quote(FFMPEG_BIN),
-              '-y',
-              '-i', quote(inputPath),
-              '-codec:a', 'libmp3lame',
-              '-b:a', '320k',
-              '-map_metadata', '0',
-              '-id3v2_version', '3',
-              '-progress', 'pipe:1',
-              '-nostats',
-              quote(outputPath),
-            ].join(' ');
-            console.log(`[${id}] ffmpeg start`);
+            const task = tasks.get(id);
+            const inputFormat = task ? task.inputFormat : null;
+            const ffmpegArgs = buildFfmpegArgs(inputPath, outputPath, inputFormat, targetFormat, '320k');
+            console.log(`[${id}] ffmpeg start`, ffmpegArgs.join(' '));
 
-            const proc = exec(cmd, { timeout: 30 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 });
+            const proc = spawn(FFMPEG_BIN, ffmpegArgs);
             activeProcesses.add(proc);
+
+            // Manual timeout (spawn does not have a timeout option)
+            const timer = setTimeout(() => {
+              console.log(`[${id}] timeout, killing`);
+              proc.kill('SIGKILL');
+            }, 30 * 60 * 1000);
 
             let lastPercent = 0;
             let estTotal = 0;
@@ -209,8 +244,8 @@ router.post('/convert', (req, res) => {
                 const pct = Math.min(Math.round((outTime / total) * 100), 99);
                 if (pct > lastPercent) {
                   lastPercent = pct;
-                  const task = tasks.get(id);
-                  if (task) task.percent = pct;
+                  const t = tasks.get(id);
+                  if (t) t.percent = pct;
                 }
               }
             });
@@ -229,22 +264,27 @@ router.post('/convert', (req, res) => {
               }
             });
 
-            proc.on('close', (code) => {
+            function onFinish() {
               activeProcesses.delete(proc);
+              clearTimeout(timer);
+            }
+
+            proc.on('close', (code) => {
+              onFinish();
               if (code === 0) {
-                const task = tasks.get(id);
-                if (task) {
-                  task.status = 'done';
-                  task.percent = 100;
-                  task.downloadUrl = '/downloads/' + encodeURIComponent(outputFilename);
+                const t = tasks.get(id);
+                if (t) {
+                  t.status = 'done';
+                  t.percent = 100;
+                  t.downloadUrl = '/downloads/' + encodeURIComponent(outputFilename);
                 }
                 console.log(`[${id}] complete`);
                 resolve();
               } else {
-                const task = tasks.get(id);
-                if (task) {
-                  task.status = 'error';
-                  task.errorMessage = '格式转换失败';
+                const t = tasks.get(id);
+                if (t) {
+                  t.status = 'error';
+                  t.errorMessage = '格式转换失败';
                 }
                 console.error(`[${id}] exit ${code}:`, stderr.slice(-400));
                 fs.unlink(outputPath, () => {});
@@ -254,11 +294,11 @@ router.post('/convert', (req, res) => {
             });
 
             proc.on('error', (err) => {
-              activeProcesses.delete(proc);
-              const task = tasks.get(id);
-              if (task) {
-                task.status = 'error';
-                task.errorMessage = '格式转换失败';
+              onFinish();
+              const t = tasks.get(id);
+              if (t) {
+                t.status = 'error';
+                t.errorMessage = '格式转换失败';
               }
               console.error(`[${id}] error:`, err.message);
               fs.unlink(outputPath, () => {});

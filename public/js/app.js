@@ -158,12 +158,26 @@ dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
   const files = Array.from(e.dataTransfer.files).filter(f =>
-    f.name.toLowerCase().endsWith('.flac')
+    ['.flac', '.wav', '.mp3'].some(ext => f.name.toLowerCase().endsWith(ext))
   );
   if (files.length > 0) {
     addFiles(files);
   } else {
-    showError('仅支持 .flac 文件');
+    showError('仅支持 .flac .wav .mp3 文件');
+  }
+});
+
+// --- Format selector ---
+
+const formatOptions = document.querySelectorAll('.format-option');
+formatOptions.forEach(opt => {
+  const radio = opt.querySelector('input[type="radio"]');
+  if (radio) {
+    if (radio.checked) opt.classList.add('active');
+    radio.addEventListener('change', () => {
+      formatOptions.forEach(o => o.classList.remove('active'));
+      if (radio.checked) opt.classList.add('active');
+    });
   }
 });
 
@@ -178,6 +192,9 @@ convertBtn.addEventListener('click', () => {
 
   const formData = new FormData();
   selectedFiles.forEach(f => formData.append('files', f));
+  const targetFormatEl = document.querySelector('input[name="targetFormat"]:checked');
+  const currentTargetFormat = targetFormatEl ? targetFormatEl.value : 'mp3';
+  formData.append('targetFormat', currentTargetFormat);
 
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/convert');
@@ -200,7 +217,7 @@ convertBtn.addEventListener('click', () => {
         return;
       }
       setProgress(50, '开始转换...');
-      listenBatchProgress(result.taskIds);
+      listenBatchProgress(result.taskIds, currentTargetFormat);
     } catch (_) {
       showError('服务器返回异常');
       converting = false;
@@ -226,7 +243,8 @@ convertBtn.addEventListener('click', () => {
 
 // --- Batch SSE progress ---
 
-function listenBatchProgress(taskIds) {
+function listenBatchProgress(taskIds, targetFormat) {
+  const fmtLabel = (targetFormat || 'mp3').toUpperCase();
   fileProgressList.style.display = 'block';
   fileProgressList.innerHTML = '';
 
@@ -277,7 +295,7 @@ function listenBatchProgress(taskIds) {
     resultItem.className = 'result-item success';
     resultItem.innerHTML =
       `<span>${escapeHtml(item ? item.nameEl.textContent : data.taskId)}</span>
-      <a href="${data.downloadUrl}" class="btn-download-sm">下载 MP3</a>`;
+      <a href="${data.downloadUrl}" class="btn-download-sm">下载 ${fmtLabel}</a>`;
     resultsList.appendChild(resultItem);
     resultsList.style.display = 'block';
 

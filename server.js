@@ -100,7 +100,7 @@ app.get('/downloads/:filename', (req, res) => {
   }
 
   // Derive download name from stored filename: "song_uuid.mp3" → "song.mp3"
-  const downloadName = filename.replace(/_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\.mp3)$/i, '$1');
+  const downloadName = filename.replace(/_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\.(mp3|wav|flac))$/i, '$1');
   res.download(filepath, downloadName, (err) => {
     if (err && !res.headersSent) {
       res.status(500).json({ error: '下载失败' });

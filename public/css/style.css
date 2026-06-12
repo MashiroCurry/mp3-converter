@@ -113,6 +113,79 @@ h1 {
   cursor: not-allowed;
 }
 
+/* ========== Format Selector ========== */
+.format-selector {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.format-label {
+  display: block;
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.format-options {
+  display: flex;
+  gap: 8px;
+}
+
+.format-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: center;
+  user-select: none;
+}
+
+.format-option:hover {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.05);
+}
+
+.format-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.format-option:has(input[type="radio"]:checked) {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.12);
+}
+
+.format-badge {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 2px;
+}
+
+.format-option:has(input:checked) .format-badge {
+  color: #a78bfa;
+}
+
+.format-desc {
+  font-size: 11px;
+  color: #666;
+}
+
+/* Fallback for browsers without :has() support */
+.format-option.active {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.12);
+}
+.format-option.active .format-badge {
+  color: #a78bfa;
+}
+
 /* File info */
 .file-info {
   background: #222;
