@@ -170,12 +170,36 @@ dropZone.addEventListener('drop', (e) => {
 // --- Format selector ---
 
 const formatOptions = document.querySelectorAll('.format-option');
+const bitrateSelector = document.getElementById('bitrateSelector');
+
+function toggleBitrateVisibility() {
+  const checked = document.querySelector('input[name="targetFormat"]:checked');
+  bitrateSelector.style.display = (checked && checked.value === 'mp3') ? 'block' : 'none';
+}
+
 formatOptions.forEach(opt => {
   const radio = opt.querySelector('input[type="radio"]');
   if (radio) {
     if (radio.checked) opt.classList.add('active');
     radio.addEventListener('change', () => {
       formatOptions.forEach(o => o.classList.remove('active'));
+      if (radio.checked) opt.classList.add('active');
+      toggleBitrateVisibility();
+    });
+  }
+});
+
+// Initial state: MP3 is default checked, so show bitrate
+toggleBitrateVisibility();
+
+// Bitrate selector highlight
+const bitrateOptions = document.querySelectorAll('.bitrate-option');
+bitrateOptions.forEach(opt => {
+  const radio = opt.querySelector('input[type="radio"]');
+  if (radio) {
+    if (radio.checked) opt.classList.add('active');
+    radio.addEventListener('change', () => {
+      bitrateOptions.forEach(o => o.classList.remove('active'));
       if (radio.checked) opt.classList.add('active');
     });
   }
@@ -195,6 +219,11 @@ convertBtn.addEventListener('click', () => {
   const targetFormatEl = document.querySelector('input[name="targetFormat"]:checked');
   const currentTargetFormat = targetFormatEl ? targetFormatEl.value : 'mp3';
   formData.append('targetFormat', currentTargetFormat);
+
+  const bitrateEl = document.querySelector('input[name="bitrate"]:checked');
+  if (bitrateEl && currentTargetFormat === 'mp3') {
+    formData.append('bitrate', bitrateEl.value);
+  }
 
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/convert');
@@ -217,7 +246,7 @@ convertBtn.addEventListener('click', () => {
         return;
       }
       setProgress(50, '开始转换...');
-      listenBatchProgress(result.taskIds, currentTargetFormat);
+      listenBatchProgress(result.taskIds, currentTargetFormat, result.queueSize || 0);
     } catch (_) {
       showError('服务器返回异常');
       converting = false;
@@ -243,13 +272,14 @@ convertBtn.addEventListener('click', () => {
 
 // --- Batch SSE progress ---
 
-function listenBatchProgress(taskIds, targetFormat) {
+function listenBatchProgress(taskIds, targetFormat, initialQueueSize) {
   const fmtLabel = (targetFormat || 'mp3').toUpperCase();
   fileProgressList.style.display = 'block';
   fileProgressList.innerHTML = '';
 
   const itemMap = {};       // taskId → DOM elements
   const receivedClosed = new Set();
+  let queueSize = initialQueueSize || 0;
 
   for (let i = 0; i < taskIds.length; i++) {
     const item = document.createElement('div');
@@ -257,15 +287,40 @@ function listenBatchProgress(taskIds, targetFormat) {
     item.innerHTML =
       `<span class="fpi-name">${escapeHtml(selectedFiles[i].name)}</span>
       <div class="fpi-bar"><div class="fpi-fill"></div></div>
-      <span class="fpi-pct">0%</span>`;
+      <span class="fpi-pct">0%</span>
+      <button type="button" class="fpi-cancel" data-taskid="${taskIds[i]}" title="取消转换">取消</button>`;
     fileProgressList.appendChild(item);
     itemMap[taskIds[i]] = {
       el: item,
       fill: item.querySelector('.fpi-fill'),
       pct: item.querySelector('.fpi-pct'),
       nameEl: item.querySelector('.fpi-name'),
+      cancelBtn: item.querySelector('.fpi-cancel'),
     };
+
+    // Show queue position if this task is waiting
+    if (queueSize > 0) {
+      const pos = queueSize >= taskIds.length ? queueSize - taskIds.length + i + 1 : i + 1;
+      itemMap[taskIds[i]].pct.textContent = '排队';
+    }
   }
+
+  // Attach cancel handlers
+  document.querySelectorAll('.fpi-cancel').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const taskId = this.dataset.taskid;
+      if (!taskId) return;
+      this.disabled = true;
+      this.textContent = '...';
+
+      fetch('/api/convert/' + taskId, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.success) console.warn('Cancel failed:', data.error);
+        })
+        .catch(err => console.warn('Cancel error:', err));
+    });
+  });
 
   const es = new EventSource('/api/batch-progress?ids=' + encodeURIComponent(taskIds.join(',')));
 
@@ -274,8 +329,13 @@ function listenBatchProgress(taskIds, targetFormat) {
     try { data = JSON.parse(e.data); } catch (_) { return; }
     const item = itemMap[data.taskId];
     if (!item) return;
-    item.fill.style.width = data.percent + '%';
-    item.pct.textContent = Math.round(data.percent) + '%';
+    const pct = Math.round(data.percent);
+    item.fill.style.width = pct + '%';
+    item.pct.textContent = pct + '%';
+    // Hide cancel button once progress starts
+    if (pct > 0 && item.cancelBtn) {
+      item.cancelBtn.style.display = 'none';
+    }
   });
 
   es.addEventListener('complete', (e) => {
@@ -289,6 +349,7 @@ function listenBatchProgress(taskIds, targetFormat) {
       item.fill.style.width = '100%';
       item.pct.textContent = '100%';
       item.el.classList.add('done');
+      if (item.cancelBtn) item.cancelBtn.style.display = 'none';
     }
 
     const resultItem = document.createElement('div');
@@ -317,9 +378,15 @@ function listenBatchProgress(taskIds, targetFormat) {
     if (taskId) {
       const item = itemMap[taskId];
       if (item) {
-        item.el.classList.add('error');
-        item.fill.style.width = '0%';
-        item.pct.textContent = '失败';
+        if (msg === '已取消') {
+          item.el.classList.add('cancelled');
+          item.pct.textContent = '已取消';
+        } else {
+          item.el.classList.add('error');
+          item.fill.style.width = '0%';
+          item.pct.textContent = '失败';
+        }
+        if (item.cancelBtn) item.cancelBtn.style.display = 'none';
       }
 
       const resultItem = document.createElement('div');

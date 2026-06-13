@@ -53,6 +53,27 @@
             <span class="format-desc">无损压缩</span>
           </label>
         </div>
+        <div class="bitrate-selector" id="bitrateSelector">
+          <label class="format-label">MP3 比特率</label>
+          <div class="bitrate-options">
+            <label class="bitrate-option">
+              <input type="radio" name="bitrate" value="128k">
+              <span>128k</span>
+            </label>
+            <label class="bitrate-option">
+              <input type="radio" name="bitrate" value="192k">
+              <span>192k</span>
+            </label>
+            <label class="bitrate-option">
+              <input type="radio" name="bitrate" value="256k">
+              <span>256k</span>
+            </label>
+            <label class="bitrate-option active">
+              <input type="radio" name="bitrate" value="320k" checked>
+              <span>320k</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <button type="button" class="btn-primary" id="convertBtn" disabled>开始转换</button>

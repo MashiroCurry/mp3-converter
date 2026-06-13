@@ -10,8 +10,8 @@ const { default: PQueue } = require('p-queue');
 // ffmpeg binary path (pre-copied to a no-spaces location)
 const FFMPEG_BIN = 'C:/ffmpeg/ffmpeg.exe';
 
-// Track active ffmpeg child processes for graceful shutdown
-const activeProcesses = new Set();
+// Track active ffmpeg child processes for graceful shutdown — Map<taskId, ChildProcess>
+const activeProcesses = new Map();
 
 const router = Router();
 
@@ -20,7 +20,13 @@ router.shutdown = function () {
   const count = activeProcesses.size;
   if (count > 0) {
     console.log(`Terminating ${count} active ffmpeg process(es)...`);
-    activeProcesses.forEach(p => { try { p.kill('SIGKILL'); } catch (_) {} });
+    activeProcesses.forEach(p => {
+      try {
+        p.kill('SIGTERM');
+        // Force kill after 2 seconds if SIGTERM didn't work
+        setTimeout(() => { try { p.kill('SIGKILL'); } catch (_) {} }, 2000);
+      } catch (_) {}
+    });
     activeProcesses.clear();
   }
 };
@@ -127,6 +133,9 @@ router.post('/convert', (req, res) => {
       return res.status(400).json({ error: '无效的目标格式' });
     }
 
+    // Read optional bitrate (only applies to MP3 output)
+    const bitrate = req.body.bitrate || req.app.locals.CONFIG.MP3_BITRATE;
+
     const tasks = req.app.locals.tasks;
     const { outputDir } = getDirs(req.app);
 
@@ -207,7 +216,7 @@ router.post('/convert', (req, res) => {
       }
 
       // Respond immediately with all task IDs
-      res.json({ taskIds });
+      res.json({ taskIds, queueSize: queue.size + queue.pending });
 
       // Enqueue one conversion per file
       for (let i = 0; i < req.files.length; i++) {
@@ -220,32 +229,46 @@ router.post('/convert', (req, res) => {
         queue.add(async () => {
           return new Promise((resolve) => {
             const task = tasks.get(id);
+
+            // Check if cancelled while waiting in queue
+            if (!task || task.status === 'cancelled') {
+              resolve();
+              return;
+            }
+
             const inputFormat = task ? task.inputFormat : null;
-            const ffmpegArgs = buildFfmpegArgs(inputPath, outputPath, inputFormat, targetFormat, '320k');
+            const ffmpegArgs = buildFfmpegArgs(inputPath, outputPath, inputFormat, targetFormat, bitrate);
             console.log(`[${id}] ffmpeg start`, ffmpegArgs.join(' '));
 
             const proc = spawn(FFMPEG_BIN, ffmpegArgs);
-            activeProcesses.add(proc);
+            activeProcesses.set(id, proc);
 
             // Manual timeout (spawn does not have a timeout option)
             const timer = setTimeout(() => {
               console.log(`[${id}] timeout, killing`);
-              proc.kill('SIGKILL');
+              proc.kill('SIGTERM');
+              setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 2000);
             }, 30 * 60 * 1000);
 
             let lastPercent = 0;
             let estTotal = 0;
+            let stdoutBuffer = '';
 
             proc.stdout.on('data', (data) => {
-              const match = data.toString().match(/out_time_us=(\d+)/);
-              if (match) {
-                const outTime = parseInt(match[1], 10) / 1000000;
-                const total = estTotal || 1;
-                const pct = Math.min(Math.round((outTime / total) * 100), 99);
-                if (pct > lastPercent) {
-                  lastPercent = pct;
-                  const t = tasks.get(id);
-                  if (t) t.percent = pct;
+              stdoutBuffer += data.toString();
+              const lines = stdoutBuffer.split('\n');
+              stdoutBuffer = lines.pop(); // keep the incomplete line for next chunk
+              for (const line of lines) {
+                const match = line.match(/^out_time_us=(\d+)/);
+                if (match) {
+                  const outTime = parseInt(match[1], 10) / 1000000;
+                  const total = estTotal || 1;
+                  const pct = Math.min(Math.round((outTime / total) * 100), 99);
+                  if (pct > lastPercent) {
+                    lastPercent = pct;
+                    const t = tasks.get(id);
+                    if (t) t.percent = pct;
+                  }
                 }
               }
             });
@@ -254,6 +277,7 @@ router.post('/convert', (req, res) => {
             proc.stderr.on('data', (data) => {
               const chunk = data.toString();
               stderr += chunk;
+              if (stderr.length > 100000) stderr = stderr.slice(-50000);
               // Parse Duration from ffmpeg stderr (e.g. "Duration: 00:30:25.10")
               if (!estTotal) {
                 const durMatch = chunk.match(/Duration:\s*(\d+):(\d+):(\d+)\.(\d+)/);
@@ -265,7 +289,7 @@ router.post('/convert', (req, res) => {
             });
 
             function onFinish() {
-              activeProcesses.delete(proc);
+              activeProcesses.delete(id);
               clearTimeout(timer);
             }
 
@@ -314,6 +338,41 @@ router.post('/convert', (req, res) => {
       return res.status(400).json({ error: validationErr.message || '文件校验失败' });
     }
   });
+});
+
+// DELETE /api/convert/:taskId — cancel a queued or running conversion
+router.delete('/convert/:taskId', (req, res) => {
+  const { taskId } = req.params;
+  const tasks = req.app.locals.tasks;
+  const task = tasks.get(taskId);
+
+  if (!task) {
+    return res.status(404).json({ error: '任务不存在或已过期' });
+  }
+
+  if (task.status !== 'converting') {
+    return res.status(400).json({ error: '任务已结束或已取消' });
+  }
+
+  // Mark as cancelled immediately
+  task.status = 'cancelled';
+  task.percent = 0;
+
+  // Kill ffmpeg process if running
+  const proc = activeProcesses.get(taskId);
+  if (proc) {
+    console.log(`[${taskId}] cancelling, killing process`);
+    try {
+      proc.kill('SIGTERM');
+      setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 2000);
+    } catch (_) {}
+  }
+
+  // Clean up input/output files
+  fs.unlink(task.inputPath, () => {});
+  fs.unlink(task.outputPath, () => {});
+
+  res.json({ success: true });
 });
 
 module.exports = router;

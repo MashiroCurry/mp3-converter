@@ -9,6 +9,7 @@ function securityHeaders(req, res, next) {
   res.setHeader('X-Download-Options', 'noopen');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://*.baidu.com https://plausible.io; img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com https://*.baidu.com; connect-src 'self' https://www.google-analytics.com https://*.baidu.com https://plausible.io; style-src 'self' 'unsafe-inline';");
   next();
 }
 // ffmpeg-installer — optional; in SEA builds ffmpeg is pre-extracted by the shim
@@ -86,6 +87,11 @@ app.use('/api/', apiLimiter);
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Health check endpoint (not rate-limited)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
 // Routes
 app.use('/api', require('./routes/convert'));
 app.use('/api', require('./routes/progress'));
@@ -93,7 +99,13 @@ app.use('/api', require('./routes/progress'));
 // Download route
 app.get('/downloads/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const filepath = path.join(CONFIG.OUTPUT_DIR, filename);
+  const outputDir = path.resolve(CONFIG.OUTPUT_DIR);
+  const filepath = path.join(outputDir, filename);
+
+  // Ensure resolved path is inside the output directory
+  if (!filepath.startsWith(outputDir)) {
+    return res.status(403).json({ error: '访问被拒绝' });
+  }
 
   if (!fs.existsSync(filepath)) {
     return res.status(404).json({ error: '文件不存在或已被删除' });
@@ -120,13 +132,21 @@ function cleanupFiles() {
   const now = Date.now();
   for (const dir of dirs) {
     fs.readdir(dir, (err, files) => {
-      if (err) return;
+      if (err) {
+        if (err.code !== 'ENOENT') console.error(`cleanup readdir ${dir}:`, err.message);
+        return;
+      }
       for (const file of files) {
         const filepath = path.join(dir, file);
         fs.stat(filepath, (err, stats) => {
-          if (err) return;
+          if (err) {
+            if (err.code !== 'ENOENT') console.error(`cleanup stat ${filepath}:`, err.message);
+            return;
+          }
           if (now - stats.mtimeMs > CONFIG.FILE_MAX_AGE_MS) {
-            fs.unlink(filepath, () => {});
+            fs.unlink(filepath, (err) => {
+              if (err && err.code !== 'ENOENT') console.error(`cleanup unlink ${filepath}:`, err.message);
+            });
           }
         });
       }
@@ -137,11 +157,13 @@ function cleanupFiles() {
 // Task Map cleanup: remove old non-converting entries every 10 min
 function cleanupTaskMap() {
   const now = Date.now();
+  const stale = [];
   for (const [id, task] of tasks) {
     if (task.status !== 'converting' && now - task.createdAt > CONFIG.TASK_MAP_MAX_AGE_MS) {
-      tasks.delete(id);
+      stale.push(id);
     }
   }
+  for (const id of stale) tasks.delete(id);
 }
 
 setInterval(cleanupFiles, CONFIG.CLEANUP_INTERVAL_MS);
@@ -152,7 +174,7 @@ const server = app.listen(CONFIG.PORT, () => {
   console.log(`ffmpeg: ${ffmpegBinPath}`);
 });
 server.timeout = CONFIG.REQUEST_TIMEOUT_MS;
-server.keepAliveTimeout = CONFIG.REQUEST_TIMEOUT_MS;
+server.keepAliveTimeout = 30000;
 server.requestTimeout = CONFIG.REQUEST_TIMEOUT_MS;
 
 // Graceful shutdown
@@ -168,3 +190,16 @@ function shutdown(signal) {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Process crash protection — log and clean up rather than silent death
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  // Attempt graceful shutdown (SIGKILL ffmpeg processes, close server)
+  try { require('./routes/convert').shutdown(); } catch (_) {}
+  server.close(() => process.exit(1));
+  setTimeout(() => process.exit(1), 5000);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});

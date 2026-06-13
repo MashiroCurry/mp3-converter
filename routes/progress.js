@@ -62,6 +62,10 @@ router.get('/batch-progress', (req, res) => {
         res.write(`event: complete\ndata: ${JSON.stringify({ taskId: id, downloadUrl: task.downloadUrl })}\n\n`);
         sentClosed.add(id);
         hadActivity = true;
+      } else if (task.status === 'cancelled') {
+        res.write(`event: task-error\ndata: ${JSON.stringify({ taskId: id, message: '已取消' })}\n\n`);
+        sentClosed.add(id);
+        hadActivity = true;
       } else if (task.status === 'error') {
         res.write(`event: task-error\ndata: ${JSON.stringify({ taskId: id, message: task.errorMessage || '转换失败' })}\n\n`);
         sentClosed.add(id);
@@ -140,6 +144,13 @@ router.get('/progress/:taskId', (req, res) => {
       return;
     }
 
+    if (task.status === 'cancelled') {
+      res.write(`event: task-error\ndata: ${JSON.stringify({ message: '已取消' })}\n\n`);
+      clearInterval(interval);
+      res.end();
+      return;
+    }
+
     if (task.status === 'error') {
       res.write(`event: task-error\ndata: ${JSON.stringify({ message: task.errorMessage || '转换失败' })}\n\n`);
       clearInterval(interval);
@@ -159,7 +170,7 @@ router.get('/progress/:taskId', (req, res) => {
     res.write(`event: task-error\ndata: ${JSON.stringify({ message: '转换超时，请重试' })}\n\n`);
     clearInterval(interval);
     res.end();
-  }, 12 * 60 * 1000);
+  }, req.app.locals.CONFIG.PROGRESS_TIMEOUT_MS);
 
   req.on('close', () => {
     clearInterval(interval);

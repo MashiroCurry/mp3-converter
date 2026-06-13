@@ -186,6 +186,47 @@ h1 {
   color: #a78bfa;
 }
 
+/* Bitrate selector (shown when MP3 is selected) */
+.bitrate-selector {
+  margin-top: 12px;
+  display: block;
+}
+.bitrate-options {
+  display: flex;
+  gap: 6px;
+}
+.bitrate-option {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+  font-size: 13px;
+  color: #888;
+}
+.bitrate-option:hover {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.05);
+}
+.bitrate-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.bitrate-option:has(input[type="radio"]:checked) {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.12);
+  color: #a78bfa;
+}
+.bitrate-option.active {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.12);
+  color: #a78bfa;
+}
+
 /* File info */
 .file-info {
   background: #222;
@@ -429,6 +470,38 @@ h1 {
   color: #888;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* Cancel button per file progress */
+.fpi-status {
+  font-size: 11px;
+  color: #888;
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+.fpi-cancel {
+  background: none;
+  border: 1px solid #555;
+  color: #888;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, color 0.2s;
+  line-height: 1.4;
+}
+.fpi-cancel:hover {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+.file-progress-item.cancelled .fpi-name {
+  color: #888;
+  text-decoration: line-through;
+}
+.file-progress-item.cancelled .fpi-fill {
+  background: #555;
 }
 
 /* Results list */
