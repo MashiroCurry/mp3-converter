@@ -2,8 +2,22 @@ const { Router } = require('express');
 
 const router = Router();
 
+// Track active SSE connections to prevent resource exhaustion
+const activeSSEConnections = new Set();
+const MAX_SSE_CONNECTIONS = 50;
+
 // NOTE: /batch-progress must be defined BEFORE /progress/:taskId
 // otherwise Express matches /batch-progress against :taskId first.
+
+function onSSEConnect(req, res) {
+  if (activeSSEConnections.size >= MAX_SSE_CONNECTIONS) {
+    res.status(429).json({ error: 'SSE 连接过多，请稍后再试' });
+    return false;
+  }
+  activeSSEConnections.add(res);
+  res.on('close', () => { activeSSEConnections.delete(res); });
+  return true;
+}
 
 // GET /api/batch-progress?ids=id1,id2,id3
 router.get('/batch-progress', (req, res) => {
@@ -11,6 +25,8 @@ router.get('/batch-progress', (req, res) => {
   if (ids.length === 0) {
     return res.status(400).json({ error: '缺少 ids 参数' });
   }
+
+  if (!onSSEConnect(req, res)) return;
 
   const tasks = req.app.locals.tasks;
   const existing = ids.filter(id => tasks.has(id));
@@ -108,6 +124,8 @@ router.get('/batch-progress', (req, res) => {
 });
 
 router.get('/progress/:taskId', (req, res) => {
+  if (!onSSEConnect(req, res)) return;
+
   const { taskId } = req.params;
   const tasks = req.app.locals.tasks;
 

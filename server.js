@@ -9,7 +9,9 @@ function securityHeaders(req, res, next) {
   res.setHeader('X-Download-Options', 'noopen');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://*.baidu.com https://plausible.io; img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com https://*.baidu.com; connect-src 'self' https://www.google-analytics.com https://*.baidu.com https://plausible.io; style-src 'self' 'unsafe-inline';");
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://*.baidu.com https://plausible.io; img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com https://*.baidu.com; connect-src 'self' https://www.google-analytics.com https://*.baidu.com https://plausible.io; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; form-action 'self'");
   next();
 }
 // ffmpeg-installer — optional; in SEA builds ffmpeg is pre-extracted by the shim
@@ -23,6 +25,16 @@ const ffmpegBinPath = path.join(FFMPEG_DIR, 'ffmpeg.exe');
 if (!fs.existsSync(ffmpegBinPath) && ffmpegInstaller) {
   fs.mkdirSync(FFMPEG_DIR, { recursive: true });
   fs.copyFileSync(ffmpegInstaller.path, ffmpegBinPath);
+}
+
+// Verify ffmpeg binary integrity (should be ~60 MB)
+if (fs.existsSync(ffmpegBinPath)) {
+  const stat = fs.statSync(ffmpegBinPath);
+  if (stat.size < 1024 * 1024) {
+    console.error(`WARNING: ffmpeg binary at ${ffmpegBinPath} appears invalid (${(stat.size / 1024).toFixed(0)} KB)`);
+  } else {
+    console.log(`ffmpeg: ${(stat.size / 1024 / 1024).toFixed(1)} MB at ${ffmpegBinPath}`);
+  }
 }
 
 const CONFIG = {

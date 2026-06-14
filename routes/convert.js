@@ -89,7 +89,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB per file
+    fieldNameSize: 100,          // max field name length
+    fieldSize: 1024,             // max field value length (bitrate value ~4 chars)
+    fields: 5,                   // max non-file fields
+  },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ACCEPTED_EXTENSIONS.includes(ext)) {
@@ -101,6 +106,15 @@ const upload = multer({
 
 // POST /api/convert
 router.post('/convert', (req, res) => {
+  // Origin check (CSRF protection) — allow same-origin only
+  const origin = req.get('Origin') || req.get('Referer') || '';
+  if (origin) {
+    const expectedOrigin = req.protocol + '://' + req.get('Host');
+    if (!origin.startsWith(expectedOrigin)) {
+      return res.status(403).json({ error: '拒绝跨域请求' });
+    }
+  }
+
   upload(req, res, async (err) => {
     // Handle multer errors
     if (err) {
@@ -134,7 +148,11 @@ router.post('/convert', (req, res) => {
     }
 
     // Read optional bitrate (only applies to MP3 output)
-    const bitrate = req.body.bitrate || req.app.locals.CONFIG.MP3_BITRATE;
+    let bitrate = req.body.bitrate || req.app.locals.CONFIG.MP3_BITRATE;
+    // Validate bitrate format (e.g. 128k, 192k, 320k)
+    if (typeof bitrate !== 'string' || !/^\d{2,4}k$/.test(bitrate)) {
+      bitrate = req.app.locals.CONFIG.MP3_BITRATE;
+    }
 
     const tasks = req.app.locals.tasks;
     const { outputDir } = getDirs(req.app);
@@ -238,7 +256,11 @@ router.post('/convert', (req, res) => {
 
             const inputFormat = task ? task.inputFormat : null;
             const ffmpegArgs = buildFfmpegArgs(inputPath, outputPath, inputFormat, targetFormat, bitrate);
-            console.log(`[${id}] ffmpeg start`, ffmpegArgs.join(' '));
+            const fileSize = fs.statSync(inputPath).size;
+            console.log(JSON.stringify({
+              event: 'convert_start', taskId: id, inputFormat, targetFormat,
+              fileSize, bitrate, file: path.basename(inputPath)
+            }));
 
             const proc = spawn(FFMPEG_BIN, ffmpegArgs);
             activeProcesses.set(id, proc);
@@ -302,7 +324,11 @@ router.post('/convert', (req, res) => {
                   t.percent = 100;
                   t.downloadUrl = '/downloads/' + encodeURIComponent(outputFilename);
                 }
-                console.log(`[${id}] complete`);
+                const outSize = fs.statSync(outputPath).size;
+                console.log(JSON.stringify({
+                  event: 'convert_complete', taskId: id, inputFormat, targetFormat,
+                  outputSize: outSize, duration: task.duration || 0
+                }));
                 resolve();
               } else {
                 const t = tasks.get(id);
@@ -310,7 +336,10 @@ router.post('/convert', (req, res) => {
                   t.status = 'error';
                   t.errorMessage = '格式转换失败';
                 }
-                console.error(`[${id}] exit ${code}:`, stderr.slice(-400));
+                console.error(JSON.stringify({
+                  event: 'convert_fail', taskId: id, exitCode: code,
+                  inputFormat, targetFormat, stderr: stderr.slice(-200)
+                }));
                 fs.unlink(outputPath, () => {});
                 fs.unlink(inputPath, () => {});
                 resolve();
@@ -324,7 +353,10 @@ router.post('/convert', (req, res) => {
                 t.status = 'error';
                 t.errorMessage = '格式转换失败';
               }
-              console.error(`[${id}] error:`, err.message);
+              console.error(JSON.stringify({
+                event: 'convert_error', taskId: id, error: err.message,
+                inputFormat, targetFormat
+              }));
               fs.unlink(outputPath, () => {});
               fs.unlink(inputPath, () => {});
               resolve();
@@ -361,7 +393,7 @@ router.delete('/convert/:taskId', (req, res) => {
   // Kill ffmpeg process if running
   const proc = activeProcesses.get(taskId);
   if (proc) {
-    console.log(`[${taskId}] cancelling, killing process`);
+    console.log(JSON.stringify({ event: 'cancel_kill', taskId }));
     try {
       proc.kill('SIGTERM');
       setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 2000);
