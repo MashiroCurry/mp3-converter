@@ -17,14 +17,14 @@ body {
 
 .container {
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
 }
 
 .card {
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
   border-radius: 16px;
-  padding: 40px 32px;
+  padding: 36px 100px;
   text-align: center;
 }
 
@@ -45,7 +45,7 @@ h1 {
 .drop-zone {
   border: 2px dashed #3a3a3a;
   border-radius: 12px;
-  padding: 36px 20px;
+  padding: 48px 32px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   margin-bottom: 16px;
@@ -92,6 +92,7 @@ h1 {
 
 .btn-primary {
   width: 100%;
+  max-width: 480px;
   padding: 14px;
   background: #6c5ce7;
   color: #fff;
@@ -102,6 +103,9 @@ h1 {
   cursor: pointer;
   transition: background 0.2s, opacity 0.2s;
   margin-bottom: 16px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -117,6 +121,9 @@ h1 {
 .format-selector {
   margin-bottom: 16px;
   text-align: left;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .format-label {
@@ -190,6 +197,9 @@ h1 {
 .bitrate-selector {
   margin-top: 12px;
   display: block;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .bitrate-options {
   display: flex;
@@ -551,7 +561,7 @@ h1 {
 /* Responsive */
 @media (max-width: 520px) {
   .card {
-    padding: 24px 16px;
+    padding: 32px 20px;
     border-radius: 12px;
   }
 
