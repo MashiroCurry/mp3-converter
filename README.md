@@ -10,6 +10,7 @@ A single-page web application for batch converting between FLAC, WAV, and MP3 �
 - **Same-Format Stream Copy** — Converting a file to its own format uses `-codec:a copy` for lossless passthrough
 - **Drag & Drop** — Drag files onto the page or click to select; duplicate files (same name + size + lastModified) auto-skipped
 - **Magic Number Validation** — Reads file header signatures (`fLaC` for FLAC, `RIFF....WAVE` for WAV, `ID3`/MPEG sync for MP3) to prevent extension spoofing
+- **Advanced Audio Options** — Select sample rate (original / 44100 / 48000 / 96000 Hz) and bit depth (original / 16 / 24 / 32 float) alongside the target format
 - **Real-time Progress** — Dual-phase display: upload progress (0–50%) + transcoding progress (50–100%), delivered via SSE (Server-Sent Events)
 - **Download Links** — Download converted files with original filenames restored (UUID stripped automatically)
 - **Concurrency Control** — Maximum 2 simultaneous ffmpeg processes; additional tasks are queued (max 10)
@@ -84,6 +85,8 @@ Upload audio files (FLAC / WAV / MP3) and begin conversion.
 - **Content-Type**: `multipart/form-data`
 - **Field name**: `files` (accepts multiple files)
 - **Field name**: `targetFormat` — one of `mp3`, `wav`, `flac` (required, shared across all uploaded files)
+- **Field name**: `sampleRate` — `original` / `44100` / `48000` / `96000` (optional, defaults to `original`; only applies when re-encoding, ignored for stream copy)
+- **Field name**: `bitDepth` — `original` / `16` / `24` / `32` (optional, defaults to `original`; only applies to WAV/FLAC output, ignored for MP3)
 - **Limits**: 500 MB max per file, 10 files max per request, `.flac` / `.wav` / `.mp3` extensions only
 - **Rate-limited**: 30 requests per 15 minutes to `/api/` endpoints
 
