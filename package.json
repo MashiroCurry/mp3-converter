@@ -1,6 +1,6 @@
 {
   "name": "flac-to-mp3-converter",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "Multi-format audio converter (FLAC/WAV/MP3) — batch transcoding web app",
   "main": "server.js",
   "bin": "server.js",

@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.4.0] — 2026-07-15
+
+### Added
+
+- Advanced audio options: sample rate selector (original / 44100 / 48000 / 96000 Hz)
+- Bit depth selector (original / 16 bit / 24 bit / 32 float)
+- Desktop layout enhancement: wider card (560px) with increased horizontal padding
+
+### Changed
+
+- Codebase reformatted with Prettier (consistent single quotes, spacing, line breaks)
+- Updated donate QR image
+
+### Removed
+
+- Prettier hook temporarily disabled (CI compatibility)
+
 ## [1.1.0] — 2026-06-12
 
 ### Added
