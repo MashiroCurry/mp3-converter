@@ -18,16 +18,16 @@ A single-page web application for batch converting between FLAC, WAV, and MP3 �
 
 ## Tech Stack
 
-| Layer          | Technology                                                   |
-| -------------- | ------------------------------------------------------------ |
-| Backend        | Node.js + Express 5                                          |
-| Frontend       | Vanilla JavaScript (no framework)                            |
-| Transcoder     | ffmpeg (binary provided by `@ffmpeg-installer/ffmpeg`)       |
-| File Upload    | multer 2                                                     |
-| File Validation| file-type (reads magic number from file header)              |
-| Concurrency    | p-queue                                                      |
-| Real-time Comms| Server-Sent Events (SSE)                                     |
-| Rate Limiting  | express-rate-limit                                           |
+| Layer           | Technology                                             |
+| --------------- | ------------------------------------------------------ |
+| Backend         | Node.js + Express 5                                    |
+| Frontend        | Vanilla JavaScript (no framework)                      |
+| Transcoder      | ffmpeg (binary provided by `@ffmpeg-installer/ffmpeg`) |
+| File Upload     | multer 2                                               |
+| File Validation | file-type (reads magic number from file header)        |
+| Concurrency     | p-queue                                                |
+| Real-time Comms | Server-Sent Events (SSE)                               |
+| Rate Limiting   | express-rate-limit                                     |
 
 ## Quick Start
 
@@ -102,7 +102,7 @@ Upload audio files (FLAC / WAV / MP3) and begin conversion.
 | 400    | Invalid file format / not a valid audio file  |
 | 413    | File exceeds 500 MB limit                     |
 | 429    | Too many requests / Queue full (10 tasks max) |
-| 507    | Insufficient server disk space (< 1 GB)        |
+| 507    | Insufficient server disk space (< 1 GB)       |
 
 ### GET /api/progress/:taskId
 
@@ -110,17 +110,18 @@ SSE endpoint for a single task. Connection is held open during conversion; recei
 
 **Event Types**:
 
-| Event        | Description                                  |
-| ------------ | -------------------------------------------- |
-| `progress`   | Progress update, `{ percent: 0-100 }`        |
-| `complete`   | Conversion finished, `{ downloadUrl }`        |
-| `task-error` | Conversion failed / task expired             |
+| Event        | Description                            |
+| ------------ | -------------------------------------- |
+| `progress`   | Progress update, `{ percent: 0-100 }`  |
+| `complete`   | Conversion finished, `{ downloadUrl }` |
+| `task-error` | Conversion failed / task expired       |
 
 ### GET /api/batch-progress?ids=id1,id2,id3
 
 SSE endpoint for multiple tasks. Polls every 1000ms. Sends `progress`, `complete`, and `task-error` events — each includes a `taskId` field for disambiguation. Connection auto-closes when all tasks complete. Times out after **30 minutes**.
 
 Example:
+
 ```bash
 curl -N "http://localhost:3000/api/batch-progress?ids=task1-uuid,task2-uuid"
 ```
@@ -163,17 +164,17 @@ flac-to-mp3-converter/
 
 All tunable parameters are centralized in the `CONFIG` object at the top of [server.js](server.js). Edit the file before starting the server to change values.
 
-| Parameter                     | Default     | Description                        |
-| ----------------------------- | ----------- | ---------------------------------- |
-| `PORT`                        | 3000        | Server port                        |
-| `MAX_FILE_SIZE`               | 500 MB      | Max size per file                  |
-| `MP3_BITRATE`                 | `320k`      | MP3 output bitrate                 |
-| `MAX_CONCURRENT_CONVERSIONS`  | 2           | Parallel transcoding count         |
-| `MAX_QUEUE_SIZE`              | 10          | Queue capacity                     |
-| `MAX_FILES_PER_REQUEST`       | 10          | Max files per request              |
-| `PROGRESS_TIMEOUT_MS`         | 30 min      | SSE progress timeout (batch)       |
-| `FILE_MAX_AGE_MS`             | 30 min      | Temp file retention period         |
-| `CLEANUP_INTERVAL_MS`         | 10 min      | Cleanup task interval              |
+| Parameter                    | Default | Description                  |
+| ---------------------------- | ------- | ---------------------------- |
+| `PORT`                       | 3000    | Server port                  |
+| `MAX_FILE_SIZE`              | 500 MB  | Max size per file            |
+| `MP3_BITRATE`                | `320k`  | MP3 output bitrate           |
+| `MAX_CONCURRENT_CONVERSIONS` | 2       | Parallel transcoding count   |
+| `MAX_QUEUE_SIZE`             | 10      | Queue capacity               |
+| `MAX_FILES_PER_REQUEST`      | 10      | Max files per request        |
+| `PROGRESS_TIMEOUT_MS`        | 30 min  | SSE progress timeout (batch) |
+| `FILE_MAX_AGE_MS`            | 30 min  | Temp file retention period   |
+| `CLEANUP_INTERVAL_MS`        | 10 min  | Cleanup task interval        |
 
 ## Design Notes
 
@@ -186,6 +187,7 @@ On Windows, `child_process.spawn` cannot handle paths containing spaces. To work
 ### Transcoder Selection Logic
 
 The `buildFfmpegArgs()` function in `routes/convert.js` selects the codec pair based on input→output:
+
 - **Different formats**: Uses specific encoders — `libmp3lame` (MP3), `pcm_s16le` (WAV), `flac` (FLAC)
 - **Same format**: Uses `-codec:a copy` for lossless stream copy (no re-encoding)
 
@@ -196,6 +198,7 @@ The `buildFfmpegArgs()` function in `routes/convert.js` selects the codec pair b
 ### In-Memory State
 
 Task state is stored in an in-memory `Map` shared across routes via Express `app.locals`. This means:
+
 - All in-progress and completed task information is lost on server restart
 - Download links for completed tasks are only valid while the server is running
 
@@ -212,21 +215,22 @@ Task state is stored in an in-memory `Map` shared across routes via Express `app
 ### Graceful Shutdown
 
 On `SIGTERM`/`SIGINT`:
+
 1. `routes/convert.js` exports a `shutdown()` method
 2. Iterates `activeProcesses` Set and kills all running ffmpeg processes
 3. HTTP server closes with a 10-second forced exit timeout
 
 ## Troubleshooting
 
-| Problem                          | Likely Cause                              | Fix                                                  |
-| -------------------------------- | ----------------------------------------- | ---------------------------------------------------- |
-| ffmpeg copy fails on startup     | Permission denied on `C:\ffmpeg\`         | Run terminal as Administrator, or create the dir manually |
-| Port 3000 already in use         | Another service is using the port         | Use `PORT=8080 npm start`, or stop the other process |
-| "Task expired" error             | Server was restarted / task > 60 min old  | Re-upload the file                                   |
-| Upload fails mid-way             | File exceeds 500 MB limit                 | Split the file or adjust `MAX_FILE_SIZE`             |
-| "请求过于频繁" (429)            | Too many API requests                     | Wait ~15 minutes before retrying                     |
-| MP3 download has no metadata     | ffmpeg `map_metadata` limitations         | Some metadata (cover art) can't be preserved to MP3  |
-| Antivirus flags the .exe         | Binary-in-binary SEA packaging            | This is a false positive; add an exclusion rule      |
+| Problem                      | Likely Cause                             | Fix                                                       |
+| ---------------------------- | ---------------------------------------- | --------------------------------------------------------- |
+| ffmpeg copy fails on startup | Permission denied on `C:\ffmpeg\`        | Run terminal as Administrator, or create the dir manually |
+| Port 3000 already in use     | Another service is using the port        | Use `PORT=8080 npm start`, or stop the other process      |
+| "Task expired" error         | Server was restarted / task > 60 min old | Re-upload the file                                        |
+| Upload fails mid-way         | File exceeds 500 MB limit                | Split the file or adjust `MAX_FILE_SIZE`                  |
+| "请求过于频繁" (429)         | Too many API requests                    | Wait ~15 minutes before retrying                          |
+| MP3 download has no metadata | ffmpeg `map_metadata` limitations        | Some metadata (cover art) can't be preserved to MP3       |
+| Antivirus flags the .exe     | Binary-in-binary SEA packaging           | This is a false positive; add an exclusion rule           |
 
 ## FAQ
 

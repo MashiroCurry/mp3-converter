@@ -1,132 +1,212 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>音频转换器 - MP3/WAV/FLAC 互转</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
-  <div id="mainContent">
-  <div class="container">
-    <div class="card">
-      <h1>音频转换</h1>
-      <p class="subtitle">MP3 / WAV / FLAC 批量互转</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>音频转换器 - MP3/WAV/FLAC 互转</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div id="mainContent">
+      <div class="container">
+        <div class="card">
+          <h1>音频转换</h1>
+          <p class="subtitle">MP3 / WAV / FLAC 批量互转</p>
 
-      <div class="drop-zone" id="dropZone">
-        <div class="drop-content" id="dropContent">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 16V4M12 4L8 8M12 4L16 8"/>
-            <path d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1"/>
-          </svg>
-          <p class="drop-text">拖拽音频文件到此处</p>
-          <p class="drop-hint">或点击选择文件</p>
-          <input type="file" id="fileInput" accept=".flac,.wav,.mp3" hidden multiple>
-          <button type="button" class="btn-secondary" id="selectBtn">选择文件</button>
-        </div>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-content" id="dropContent">
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M12 16V4M12 4L8 8M12 4L16 8" />
+                <path d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" />
+              </svg>
+              <p class="drop-text">拖拽音频文件到此处</p>
+              <p class="drop-hint">或点击选择文件</p>
+              <input
+                type="file"
+                id="fileInput"
+                accept=".flac,.wav,.mp3"
+                hidden
+                multiple
+              />
+              <button type="button" class="btn-secondary" id="selectBtn">
+                选择文件
+              </button>
+            </div>
 
-        <div class="file-info" id="fileInfo" style="display: none;">
-          <div class="file-list-header">
-            <span id="fileCount">0 个文件</span>
-            <button type="button" class="btn-clear-all" id="clearAllBtn">全部移除</button>
+            <div class="file-info" id="fileInfo" style="display: none">
+              <div class="file-list-header">
+                <span id="fileCount">0 个文件</span>
+                <button type="button" class="btn-clear-all" id="clearAllBtn">
+                  全部移除
+                </button>
+              </div>
+              <div class="file-list" id="fileList"></div>
+            </div>
           </div>
-          <div class="file-list" id="fileList"></div>
-        </div>
-      </div>
 
-      <div class="format-selector">
-        <label class="format-label">目标格式</label>
-        <div class="format-options">
-          <label class="format-option">
-            <input type="radio" name="targetFormat" value="mp3" checked>
-            <span class="format-badge">MP3</span>
-            <span class="format-desc">有损压缩</span>
-          </label>
-          <label class="format-option">
-            <input type="radio" name="targetFormat" value="wav">
-            <span class="format-badge">WAV</span>
-            <span class="format-desc">无损未压缩</span>
-          </label>
-          <label class="format-option">
-            <input type="radio" name="targetFormat" value="flac">
-            <span class="format-badge">FLAC</span>
-            <span class="format-desc">无损压缩</span>
-          </label>
-        </div>
-        <div class="bitrate-selector" id="bitrateSelector">
-          <label class="format-label">MP3 比特率</label>
-          <div class="bitrate-options">
-            <label class="bitrate-option">
-              <input type="radio" name="bitrate" value="128k">
-              <span>128k</span>
-            </label>
-            <label class="bitrate-option">
-              <input type="radio" name="bitrate" value="192k">
-              <span>192k</span>
-            </label>
-            <label class="bitrate-option">
-              <input type="radio" name="bitrate" value="256k">
-              <span>256k</span>
-            </label>
-            <label class="bitrate-option active">
-              <input type="radio" name="bitrate" value="320k" checked>
-              <span>320k</span>
-            </label>
+          <div class="format-selector">
+            <label class="format-label">目标格式</label>
+            <div class="format-options">
+              <label class="format-option">
+                <input type="radio" name="targetFormat" value="mp3" checked />
+                <span class="format-badge">MP3</span>
+                <span class="format-desc">有损压缩</span>
+              </label>
+              <label class="format-option">
+                <input type="radio" name="targetFormat" value="wav" />
+                <span class="format-badge">WAV</span>
+                <span class="format-desc">无损未压缩</span>
+              </label>
+              <label class="format-option">
+                <input type="radio" name="targetFormat" value="flac" />
+                <span class="format-badge">FLAC</span>
+                <span class="format-desc">无损压缩</span>
+              </label>
+            </div>
+            <div class="bitrate-selector" id="bitrateSelector">
+              <label class="format-label">MP3 比特率</label>
+              <div class="bitrate-options">
+                <label class="bitrate-option">
+                  <input type="radio" name="bitrate" value="128k" />
+                  <span>128k</span>
+                </label>
+                <label class="bitrate-option">
+                  <input type="radio" name="bitrate" value="192k" />
+                  <span>192k</span>
+                </label>
+                <label class="bitrate-option">
+                  <input type="radio" name="bitrate" value="256k" />
+                  <span>256k</span>
+                </label>
+                <label class="bitrate-option active">
+                  <input type="radio" name="bitrate" value="320k" checked />
+                  <span>320k</span>
+                </label>
+              </div>
+            </div>
+            <div class="adv-options" id="advOptions">
+              <label class="format-label" for="sampleRate">采样率</label>
+              <select class="quality-select" id="sampleRate" name="sampleRate">
+                <option value="original">原始</option>
+                <option value="44100">44100 Hz</option>
+                <option value="48000">48000 Hz</option>
+                <option value="96000">96000 Hz</option>
+              </select>
+              <div id="bitDepthRow" class="adv-bd-wrap">
+                <label class="format-label" for="bitDepth">位深度</label>
+                <select class="quality-select" id="bitDepth" name="bitDepth">
+                  <option value="original">原始</option>
+                  <option value="16">16 bit</option>
+                  <option value="24">24 bit</option>
+                  <option value="32">32 float</option>
+                </select>
+              </div>
+            </div>
           </div>
+
+          <button type="button" class="btn-primary" id="convertBtn" disabled>
+            开始转换
+          </button>
+
+          <div
+            class="progress-container"
+            id="progressContainer"
+            style="display: none"
+          >
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">上传中...</p>
+          </div>
+
+          <div
+            class="file-progress-list"
+            id="fileProgressList"
+            style="display: none"
+          ></div>
+
+          <div
+            class="results-list"
+            id="resultsList"
+            style="display: none"
+          ></div>
+
+          <div class="donate-cta" id="donateCta" style="display: none"></div>
         </div>
       </div>
 
-      <button type="button" class="btn-primary" id="convertBtn" disabled>开始转换</button>
+      <button
+        class="btn-donate-float"
+        id="donateFloatBtn"
+        aria-label="请开发者喝杯咖啡"
+        title="请开发者喝杯咖啡"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zm4-4v2m4-2v2m4-2v2"
+          />
+        </svg>
+        <span>打赏</span>
+      </button>
+    </div>
+    <!-- #mainContent -->
 
-      <div class="progress-container" id="progressContainer" style="display: none;">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
+    <div
+      class="donate-overlay"
+      id="donateOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="打赏支持作者"
+      style="display: none"
+    >
+      <div class="donate-card" id="donateCard">
+        <button class="donate-close" id="donateClose" aria-label="关闭">
+          &times;
+        </button>
+        <div class="qr-wrapper">
+          <img
+            id="qrImage"
+            src="/donate-qr.jpg"
+            alt="微信收款码"
+            loading="lazy"
+            width="260"
+            height="260"
+          />
+          <span class="qr-loading" id="qrLoading">加载中…</span>
         </div>
-        <p class="progress-text" id="progressText">上传中...</p>
+        <p class="donate-hint">微信扫码，随意金额</p>
+        <p class="donate-sub">都是对开发的支持</p>
+        <p class="donate-tip">微信内长按图片识别；其他浏览器请截图后扫码</p>
+        <p class="donate-desc">用于服务器、域名和日常咖啡</p>
+        <button class="btn-donate-paid" id="donatePaidBtn">我已打赏</button>
       </div>
-
-      <div class="file-progress-list" id="fileProgressList" style="display: none;"></div>
-
-      <div class="results-list" id="resultsList" style="display: none;"></div>
-
-      <div class="donate-cta" id="donateCta" style="display: none;"></div>
     </div>
-  </div>
 
-  <button class="btn-donate-float"
-          id="donateFloatBtn"
-          aria-label="请开发者喝杯咖啡"
-          title="请开发者喝杯咖啡">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zm4-4v2m4-2v2m4-2v2"/>
-    </svg>
-    <span>打赏</span>
-  </button>
-  </div><!-- #mainContent -->
-
-  <div class="donate-overlay" id="donateOverlay"
-       role="dialog" aria-modal="true" aria-label="打赏支持作者"
-       style="display: none;">
-    <div class="donate-card" id="donateCard">
-      <button class="donate-close" id="donateClose" aria-label="关闭">&times;</button>
-      <div class="qr-wrapper">
-        <img id="qrImage" src="/donate-qr.jpg" alt="微信收款码"
-             loading="lazy" width="260" height="260" />
-        <span class="qr-loading" id="qrLoading">加载中…</span>
-      </div>
-      <p class="donate-hint">微信扫码，随意金额</p>
-      <p class="donate-sub">都是对开发的支持</p>
-      <p class="donate-tip">微信内长按图片识别；其他浏览器请截图后扫码</p>
-      <p class="donate-desc">用于服务器、域名和日常咖啡</p>
-      <button class="btn-donate-paid" id="donatePaidBtn">我已打赏</button>
+    <div
+      class="toast"
+      id="toast"
+      role="status"
+      aria-live="polite"
+      style="display: none"
+    >
+      <span class="toast-icon">&#10004;</span>
+      <span id="toastText"></span>
     </div>
-  </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" style="display: none;">
-    <span class="toast-icon">&#10004;</span>
-    <span id="toastText"></span>
-  </div>
-
-  <script src="/js/app.js?v=4"></script>
-</body>
+    <script src="/js/app.js?v=4"></script>
+  </body>
 </html>

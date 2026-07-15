@@ -3,6 +3,7 @@
 ## [1.1.0] — 2026-06-12
 
 ### Added
+
 - Multi-format batch conversion: FLAC, WAV, MP3 interconversion (9 input→output combinations)
 - Format selector UI in the frontend (radio cards: MP3 / WAV / FLAC)
 - Same-format stream copy (`-codec:a copy` lossless passthrough)
@@ -17,16 +18,19 @@
 - Disk space check before accepting uploads (`fs.statfsSync`, ≥1 GB required)
 
 ### Changed
+
 - README.md fully rewritten for multi-format support (English & Chinese)
 - Server startup now auto-copies ffmpeg to `C:/ffmpeg/ffmpeg.exe` (space-free path workaround)
 
 ### Removed
+
 - Unused npm dependencies (cleanup)
 - `dist/` directory added to `.gitignore`
 
 ## [1.0.0] — 2026-05-31
 
 ### Added
+
 - Initial FLAC to MP3 batch converter
 - Single-page web UI with drag-and-drop upload
 - Dual-phase progress display (upload 0–50% + transcoding 50–100%) via SSE
